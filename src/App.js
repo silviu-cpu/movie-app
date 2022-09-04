@@ -2,48 +2,73 @@ import './App.css';
 import { useEffect, useState } from 'react';
 import "bootstrap/dist/css/bootstrap.min.css";
 import MovieList from './components/MovieList';
+import MovieListHeading from './components/MovieListHeading';
+import SearchBox from './components/SearchBox';
+import AddFavourites from './components/AddFavourites';
+import RemoveFavourites from './components/RemoveFavourites';
 
 const App = () => {
-  const [movies, setMovies ] = useState([{
-    "Title": "Star Wars",
-    "Year": "1977",
-    "imdbID": "tt0076759",
-    "Type": "movie",
-    "Poster": "https://m.media-amazon.com/images/M/MV5BNzg4MjQxNTQtZmI5My00YjMwLWJlMjUtMmJlY2U2ZWFlNzY1XkEyXkFqcGdeQXVyODk4OTc3MTY@._V1_SX300.jpg"
-},
-{
-    "Title": "Star Wars: Episode V - The Empire Strikes Back",
-    "Year": "1980",
-    "imdbID": "tt0080684",
-    "Type": "movie",
-    "Poster": "https://m.media-amazon.com/images/M/MV5BYmU1NDRjNDgtMzhiMi00NjZmLTg5NGItZDNiZjU5NTU4OTE0XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg"
-},
-{
-    "Title": "Star Wars: Episode VI - Return of the Jedi",
-    "Year": "1983",
-    "imdbID": "tt0086190",
-    "Type": "movie",
-    "Poster": "https://m.media-amazon.com/images/M/MV5BOWZlMjFiYzgtMTUzNC00Y2IzLTk1NTMtZmNhMTczNTk0ODk1XkEyXkFqcGdeQXVyNTAyODkwOQ@@._V1_SX300.jpg"
-}]);
+  const [movies, setMovies ] = useState([]);
+  const [searchValue, setSearchValue ] = useState(' ');
+  const [favourites, setFavourites] = useState([]);
+
 
 //fetch data from API
-const getMovieRequest = async () => {
-  const url = "http://www.omdbapi.com/?s=star wars&apikey=df17328e";
-
+const getMovieRequest = async (searchValue) => {
+  const url = `http://www.omdbapi.com/?s=${searchValue}&apikey=df17328e`;
   const response = await fetch(url);
   const responseJson = await response.json();
-  console.log(responseJson);
+
+  //handle error because the searchValue was set to ' ' when page loads, and it coudlnt retrieve data from, so i added this if
+  if(responseJson.Search){
+    setMovies(responseJson.Search)
+  }
+ 
 }
 
 useEffect(() => { 
-  getMovieRequest();
+  getMovieRequest(searchValue);
 }, 
-[]);
+[searchValue]);
 
+useEffect( () => {
+  //retrieve the items saved in localstorage
+  const movieFavourites = JSON.parse(
+    localStorage.getItem('react-movie-app-favourites'));
+
+  setFavourites(movieFavourites);
+},[]);
+
+//needed to be done this func because if we refresh all data from Favourites Movies disappear
+const saveToLocalStorage = (items) => {
+  localStorage.setItem('react-movie-app-favourites', JSON.stringify(items))
+}
+
+const addFavouriteMovie = (movie) => {
+  const newFavouriteList = [...favourites, movie]; //copy of the current array and save it into state
+  setFavourites(newFavouriteList);
+  saveToLocalStorage(newFavouriteList)
+}
+
+const removeFavouriteMovie = (movie) => {
+  const newFavouriteList = favourites.filter ((favourite) => favourite.imdbID !== movie.imdbID);
+  setFavourites(newFavouriteList);
+  saveToLocalStorage(newFavouriteList)
+}
   return (
   <div className='container-fluid movie-app'>
+    <div className='row d-flex align-items-center mt-4 mb-4 '>
+      <MovieListHeading heading="Movies"/>
+      <SearchBox searchValue={searchValue} setSearchValue={setSearchValue}/>
+    </div>
     <div className='row'>
-    <MovieList movies = {movies} />
+      <MovieList movies = {movies} handleFavouriteClick={addFavouriteMovie} favouriteComponent={AddFavourites}/>
+    </div>
+    <div className='row d-flex align-items-center mt-4 mb-4 '>
+      <MovieListHeading heading="Favourites"/>
+    </div>
+    <div className='row'>
+      <MovieList movies = {favourites} handleFavouriteClick={removeFavouriteMovie} favouriteComponent={RemoveFavourites} />
     </div>
   </div>
   )
